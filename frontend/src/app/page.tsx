@@ -125,7 +125,7 @@ export default function Home() {
               <h2 className="text-2xl font-semibold text-gray-800 mb-4">
                 3️⃣ Your Recipe
               </h2>
-              <RecipeDisplay recipe={recipe} />
+              <RecipeDisplay recipe={recipe} onRecipeUpdate={setRecipe} />
             </div>
           )}
 

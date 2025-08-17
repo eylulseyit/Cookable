@@ -13,6 +13,7 @@ class IngredientRequest(BaseModel):
     dietary_preferences: Optional[List[str]] = None
     max_cooking_time: Optional[int] = None
     allow_external_ingredients: bool = False
+    refinement_instruction: Optional[str] = None
 
 class RecipeResponse(BaseModel):
     title: str
@@ -23,6 +24,14 @@ class RecipeResponse(BaseModel):
     servings: int
     tags: List[str]
     shopping_list: Optional[List[str]] = None
+
+class RecipeVariationRequest(BaseModel):
+    title: str
+    ingredients: List[str]
+
+class RecipeVariation(BaseModel):
+    title: str
+    description: str
 
 class UserCreateResponse(BaseModel):
     user_id: int
@@ -42,11 +51,30 @@ async def recommend_recipe(
             ingredients=request.ingredients,
             dietary_preferences=request.dietary_preferences,
             max_cooking_time=request.max_cooking_time,
-            allow_external_ingredients=request.allow_external_ingredients
+            allow_external_ingredients=request.allow_external_ingredients,
+            refinement_instruction=request.refinement_instruction
         )
         return recipe
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating recipe: {str(e)}")
+
+@router.post("/recipes/variations", response_model=List[RecipeVariation])
+async def get_recipe_variations(
+    request: RecipeVariationRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Get creative variations for a given recipe.
+    """
+    try:
+        recipe_service = RecipeService(db)
+        variations = await recipe_service.get_recipe_variations(
+            title=request.title,
+            ingredients=request.ingredients
+        )
+        return variations
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating variations: {str(e)}")
 
 @router.post("/users/create", response_model=UserCreateResponse)
 async def create_user(db: Session = Depends(get_db)):

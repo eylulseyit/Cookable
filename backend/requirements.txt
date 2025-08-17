@@ -1,10 +1,10 @@
 fastapi
 uvicorn
 pydantic
-python-dotenv
 sqlalchemy
-psycopg2-binary
-langgraph
+python-dotenv
+langchain
 langchain-google-genai
 google-generativeai
-langchain 
+chromadb
+sentence-transformers 

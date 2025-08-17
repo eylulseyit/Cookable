@@ -1,12 +1,70 @@
 'use client';
 
-import { Recipe } from '@/types/recipe';
+import { useState } from 'react';
+import { Recipe, RecipeVariation } from '@/types/recipe';
 
 interface RecipeDisplayProps {
   recipe: Recipe;
+  onRecipeUpdate: (newRecipe: Recipe) => void;
 }
 
-export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
+export default function RecipeDisplay({ recipe, onRecipeUpdate }: RecipeDisplayProps) {
+  const [variations, setVariations] = useState<RecipeVariation[]>([]);
+  const [loadingVariations, setLoadingVariations] = useState(false);
+  const [refiningRecipe, setRefiningRecipe] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGetVariations = async () => {
+    setLoadingVariations(true);
+    setError(null);
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/recipes/variations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: recipe.title,
+          ingredients: recipe.ingredients,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get recipe variations.');
+      }
+      const data = await response.json();
+      setVariations(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred.');
+    } finally {
+      setLoadingVariations(false);
+    }
+  };
+
+  const handleSelectVariation = async (variation: RecipeVariation) => {
+    setRefiningRecipe(true);
+    setError(null);
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/recipes/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ingredients: recipe.ingredients,
+          allow_external_ingredients: true, // Allow external ingredients for variations
+          refinement_instruction: variation.description,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to generate the new recipe variation.');
+      }
+      const newRecipe = await response.json();
+      onRecipeUpdate(newRecipe);
+      setVariations([]); // Clear variations after selecting one
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred.');
+    } finally {
+      setRefiningRecipe(false);
+    }
+  };
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
       case 'easy':
@@ -128,6 +186,44 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
           </div>
         </div>
       </div>
+
+      {/* Variations Section */}
+      <div className="text-center mt-6">
+        <button
+          onClick={handleGetVariations}
+          disabled={loadingVariations}
+          className="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 text-white font-bold py-2 px-6 rounded-lg transition-colors duration-200"
+        >
+          {loadingVariations ? 'Brainstorming...' : '👩‍🍳 Suggest Variations'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+
+      {variations.length > 0 && (
+        <div className="mt-6 space-y-4">
+          <h4 className="text-xl font-semibold text-gray-800 text-center">Creative Variations</h4>
+          {variations.map((variation, index) => (
+            <div key={index} className="bg-purple-50 border border-purple-200 rounded-lg p-4 flex justify-between items-center">
+              <div>
+                <h5 className="font-bold text-purple-800">{variation.title}</h5>
+                <p className="text-sm text-gray-700">{variation.description}</p>
+              </div>
+              <button
+                onClick={() => handleSelectVariation(variation)}
+                disabled={refiningRecipe}
+                className="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 text-sm"
+              >
+                {refiningRecipe ? '...' : 'Try this!'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 } 

@@ -9,6 +9,12 @@ from app.core.config import settings
 
 # --- Gemini Integration ---
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
+from .vector_store_service import get_vector_store_service
+
+_recipe_service_instance = None
+
 
 class RecipeService:
     def __init__(self, db: Session = None):
@@ -32,6 +38,34 @@ class RecipeService:
             print("This usually means the API key is invalid or the 'Generative Language API' is not enabled in your Google Cloud project.")
             raise
         
+        # LangChain setup for variations
+        variation_template = """
+        You are a helpful culinary assistant. Given the following recipe title and its ingredients, suggest three creative variations.
+        For each variation, provide a new title and a brief description (1-2 sentences) of the changes.
+
+        Original Recipe Title: {title}
+        Original Ingredients: {ingredients}
+
+        Your response MUST be a single, valid JSON object with a single key "variations", which contains a list of objects.
+        Each object in the list should have two keys: "title" and "description".
+        Example:
+        {{
+          "variations": [
+            {{
+              "title": "Spicy {title}",
+              "description": "Add a pinch of red pepper flakes and a dash of cayenne pepper to the main sauce for a fiery kick."
+            }},
+            {{
+              "title": "Creamy {title} Deluxe",
+              "description": "Stir in a quarter cup of heavy cream at the end and top with toasted pine nuts for a richer, more decadent version."
+            }}
+          ]
+        }}
+        Do not include any text, explanation, or markdown formatting outside of the JSON object.
+        """
+        self.variation_prompt = PromptTemplate(template=variation_template, input_variables=["title", "ingredients"])
+        self.variation_chain = LLMChain(llm=self.llm, prompt=self.variation_prompt)
+
         self.common_ingredients = [
             "onion", "garlic", "tomato", "potato", "carrot", "bell pepper",
             "chicken", "beef", "pork", "fish", "rice", "pasta", "bread",
@@ -43,16 +77,27 @@ class RecipeService:
         ingredients: List[str],
         dietary_preferences: Optional[List[str]],
         max_cooking_time: Optional[int],
-        allow_external_ingredients: bool
+        allow_external_ingredients: bool,
+        refinement_instruction: Optional[str] = None
     ) -> str:
         """Helper function to build the prompt for the LLM."""
         
         ingredients_str = ", ".join(ingredients)
-        prompt = f"""
+
+        if refinement_instruction:
+            prompt = f"""
+You are a creative chef. A user wants to modify a recipe based on the instruction: "{refinement_instruction}".
+The original ingredients available were: {ingredients_str}.
+
+Please generate a new, complete recipe that incorporates this instruction. 
+The new recipe should be based on the original ingredients, but you can add or remove ingredients as needed to fulfill the request.
+"""
+        else:
+            prompt = f"""
 You are a creative chef. Generate a single, delicious recipe based on the following ingredients: {ingredients_str}.
 """
 
-        if not allow_external_ingredients:
+        if not allow_external_ingredients and not refinement_instruction:
             prompt += "\nYou MUST ONLY use the ingredients provided. Do not suggest any extra ingredients that are not on the list."
         else:
             prompt += "\nYou can suggest a recipe that requires a few extra simple ingredients if it makes the dish significantly better. Assume the user has basic pantry staples like salt, pepper, and oil."
@@ -129,12 +174,28 @@ Do not include any text, explanation, or markdown formatting outside of the JSON
             # If parsing fails, return an empty list as a fallback
             return []
 
+    async def get_recipe_variations(self, title: str, ingredients: List[str]) -> List[Dict[str, str]]:
+        """Generates creative variations for a given recipe using LangChain."""
+        try:
+            formatted_ingredients = ", ".join(ingredients)
+            response = await self.variation_chain.ainvoke({"title": title, "ingredients": formatted_ingredients})
+            
+            response_text = response['text']
+            if response_text.strip().startswith("```json"):
+                response_text = response_text.strip()[7:-4].strip()
+
+            data = json.loads(response_text)
+            return data.get("variations", [])
+        except (json.JSONDecodeError, KeyError):
+            return []
+    
     async def get_recipe_recommendation(
         self, 
         ingredients: List[str], 
         dietary_preferences: Optional[List[str]] = None,
         max_cooking_time: Optional[int] = None,
         allow_external_ingredients: bool = False,
+        refinement_instruction: Optional[str] = None,
         user_id: Optional[int] = None
     ) -> Recipe:
         """
@@ -152,8 +213,37 @@ Do not include any text, explanation, or markdown formatting outside of the JSON
                     max_cooking_time=max_cooking_time
                 )
         
-        # Construct the prompt for Gemini
-        prompt = self._build_recipe_prompt(ingredients, dietary_preferences, max_cooking_time, allow_external_ingredients)
+        # If the user is refining a previous recipe, we skip the search and go straight to the LLM.
+        if refinement_instruction:
+            print("--- Refinement instruction provided, skipping vector store search ---")
+        else:
+            # First, try to find a similar recipe in the vector store
+            print("--- Searching for similar recipes in vector store ---")
+            vector_store = get_vector_store_service()
+            similar_recipe = vector_store.search_similar_recipes(ingredients=ingredients, similarity_threshold=1.0) # Using a high threshold for now to test
+            
+            if similar_recipe:
+                print("--- Found a similar recipe in vector store, returning it. ---")
+                
+                # If external ingredients are allowed, we might still need to generate a shopping list
+                # for the cached recipe.
+                if allow_external_ingredients:
+                    shopping_list = await self._generate_shopping_list(
+                        user_ingredients=ingredients, recipe_ingredients=similar_recipe.ingredients
+                    )
+                    similar_recipe.shopping_list = shopping_list
+                
+                return similar_recipe
+
+        # If no similar recipe is found or if it's a refinement, proceed to generate a new one.
+        print("--- No similar recipe found or refinement requested, generating new recipe from LLM ---")
+        prompt = self._build_recipe_prompt(
+            ingredients=ingredients,
+            dietary_preferences=dietary_preferences,
+            max_cooking_time=max_cooking_time,
+            allow_external_ingredients=allow_external_ingredients,
+            refinement_instruction=refinement_instruction
+        )
         print("--- PROMPT SENT TO GEMINI ---")
         print(prompt)
         print("-----------------------------")
@@ -175,6 +265,10 @@ Do not include any text, explanation, or markdown formatting outside of the JSON
             
             # Create a Recipe Pydantic model instance
             recipe = Recipe(**recipe_data)
+
+            # Add the newly generated recipe to the vector store
+            vector_store = get_vector_store_service()
+            vector_store.add_recipe(recipe)
 
             # Generate shopping list only if external ingredients are allowed
             if allow_external_ingredients:

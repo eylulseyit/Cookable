@@ -9,6 +9,11 @@ export interface Recipe {
   shopping_list?: string[];
 }
 
+export interface RecipeVariation {
+  title: string;
+  description: string;
+}
+
 export interface IngredientRequest {
   ingredients: string[];
   dietary_preferences?: string[];

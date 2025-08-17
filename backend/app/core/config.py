@@ -9,10 +9,11 @@ load_dotenv(dotenv_path=env_path)
 
 class Settings:
     # Database settings
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
-        "sqlite:///./recipe.db"  # Changed from PostgreSQL to SQLite
-    )
+    DATABASE_URL: str = "sqlite:///./recipe.db"
+    
+    # ChromaDB Vector Store settings
+    CHROMA_DB_PATH: str = "db/chroma"
+    EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
     
     # API settings
     API_V1_STR: str = "/api/v1"
