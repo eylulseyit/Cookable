@@ -23,7 +23,7 @@ class User(Base):
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True, index=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now())
     
     # Relationships
     queries = relationship("UserQuery", back_populates="user")
@@ -35,7 +35,7 @@ class Ingredient(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     popularity_count = Column(Integer, default=0)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now())
     
     # Relationships
     recipes = relationship("Recipe", secondary=recipe_ingredients, back_populates="ingredients")
@@ -45,7 +45,7 @@ class Tag(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now())
     
     # Relationships
     recipes = relationship("Recipe", secondary=recipe_tags, back_populates="tags")
@@ -58,7 +58,7 @@ class Recipe(Base):
     cooking_time = Column(Integer)  # in minutes
     difficulty = Column(String)  # Easy, Medium, Hard
     servings = Column(Integer)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now())
     
     # Relationships
     ingredients = relationship("Ingredient", secondary=recipe_ingredients, back_populates="recipes")
@@ -85,7 +85,7 @@ class UserQuery(Base):
     ingredients = Column(Text)  # JSON string of ingredients
     dietary_preferences = Column(Text)  # JSON string of preferences
     max_cooking_time = Column(Integer, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now())
     
     # Relationships
     user = relationship("User", back_populates="queries")
@@ -98,7 +98,7 @@ class RecipeRating(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     rating = Column(Float)  # 1-5 stars
     feedback = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now())
     
     # Relationships
     recipe = relationship("Recipe", back_populates="ratings")

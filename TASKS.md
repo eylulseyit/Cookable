@@ -9,7 +9,7 @@ Bu dosya, `scripts/PRD.md` dokümanına dayanarak oluşturulan geliştirme göre
 - [x] Açık kaynak bir LLM'i backend'e entegre ederek tarif üretme mantığını kur.
 - [x] Frontend'de malzeme girişi için bir arayayüz (input ve buton) oluştur.
 - [x] Backend'den gelen tarifi (isim, malzemeler, adımlar, süre) gösterecek bir arayüz oluştur.
-- [x] Veritabanı (PostgreSQL) bağlantısını kur ve temel sorgu kayıtlarını yap.
+- [x] Veritabanı (SQLite) bağlantısını kur ve temel sorgu kayıtlarını yap.
 
 ## Faz 2: Özellik Geliştirmeleri
 - [x] Frontend'e opsiyonel filtreleme (diyet tercihleri vb.) seçenekleri ekle.
