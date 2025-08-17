@@ -3,8 +3,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
-# Create database engine
-engine = create_engine(settings.DATABASE_URL)
+# For SQLite, we need to add connect_args
+engine = create_engine(
+    settings.DATABASE_URL, connect_args={"check_same_thread": False}
+)
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
