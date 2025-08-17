@@ -1,28 +1,24 @@
-# Proje Görev Listesi
+# Capstone Project Tasks
 
-Bu dosya, `scripts/PRD.md` dokümanına dayanarak oluşturulan geliştirme görevlerini içerir.
+## Faz 1: Fikir ve Planlama (Tamamlandı)
+- [x] Problem tanımı ve fikir üretimi (PRD.md ile yapıldı).
+- [x] Kullanıcı akışı ve teknoloji seçimi (PRD.md içinde tanımlandı).
 
-## Faz 1: Proje Kurulumu ve Temel Prototip (MVP)
-- [x] Backend projesini (FastAPI) ve klasör yapısını oluştur.
-- [x] Frontend projesini (Next.js) ve klasör yapısını oluştur.
-- [x] Malzeme listesini alacak ve tarif dönecek temel API endpoint'ini oluştur.
-- [x] Açık kaynak bir LLM'i backend'e entegre ederek tarif üretme mantığını kur.
-- [x] Frontend'de malzeme girişi için bir arayayüz (input ve buton) oluştur.
-- [x] Backend'den gelen tarifi (isim, malzemeler, adımlar, süre) gösterecek bir arayüz oluştur.
-- [x] Veritabanı (SQLite) bağlantısını kur ve temel sorgu kayıtlarını yap.
+## Faz 2: Kodlama ve AI Entegrasyonu (Tamamlandı)
+- [x] GitHub reposu kuruldu ve proje yapılandırıldı.
+- [x] Temel özellik geliştirildi (Malzeme girişi -> AI Tarif çıktısı).
+- [x] Google Gemini LLM entegrasyonu sağlandı.
 
-## Faz 2: Özellik Geliştirmeleri
-- [x] Frontend'e opsiyonel filtreleme (diyet tercihleri vb.) seçenekleri ekle.
-- [ ] Backend API'ını, filtreleme parametrelerini alacak şekilde güncelle.
-- [ ] AI modelinin, filtreleri dikkate alarak tarif üretmesini sağla.
+## Faz 3: Otomasyon ve Ajans Mantığı
+- [ ] Tarifi analiz edip alışveriş listesi çıkaran bir otomasyon kur.
+- [ ] LangChain veya benzeri bir kütüphane kullanarak daha yetenekli bir tarif 'Agent'ı oluştur (örneğin: tarif varyasyonları önerme).
 
-## Faz 3: Dağıtım (Deployment)
+## Faz 4: RAG veya Fine-tuning Uygulaması
+- [ ] Mevcut tarifleri saklamak için bir VectorDB entegrasyonu yap (Chroma, FAISS vb.).
+- [ ] Kullanıcının malzemelerine en uygun tarifi VectorDB'den bulan bir RAG (Retrieval-Augmented Generation) sistemi kur.
+
+## Faz 5: Yayınlama ve Demo
 - [ ] Frontend uygulamasını Vercel'e dağıt.
 - [ ] Backend uygulamasını Railway'e dağıt.
-- [ ] AI modelinin performansını ve doğruluğunu test et.
-
-## Faz 4: Gelecek Sürümler (Post-MVP)
-- [ ] Kullanıcı hesabı ve oturum yönetimi özelliklerini ekle.
-- [ ] Kullanıcıların tarifleri kaydetme ve paylaşma özelliğini geliştir.
-- [ ] Sesli malzeme girişi özelliğini ekle.
-- [ ] Alışveriş listesi oluşturma fonksiyonunu geliştir.
+- [ ] Proje için bir tanıtım sayfası (Landing Page) oluştur.
+- [ ] Projenin demo videosunu veya GIF'ini hazırla.

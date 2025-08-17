@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class Recipe(BaseModel):
     title: str
@@ -9,6 +9,7 @@ class Recipe(BaseModel):
     difficulty: str  # Easy, Medium, Hard
     servings: int
     tags: List[str]  # e.g., ["vegetarian", "quick", "pasta"]
+    shopping_list: Optional[List[str]] = None
     
     class Config:
         json_schema_extra = {

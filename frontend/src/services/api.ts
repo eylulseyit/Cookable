@@ -1,6 +1,6 @@
 import { Recipe, IngredientRequest } from '@/types/recipe';
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export class ApiService {
   static async getRecipeRecommendation(request: IngredientRequest): Promise<Recipe> {

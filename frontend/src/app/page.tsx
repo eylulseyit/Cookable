@@ -10,7 +10,8 @@ export default function Home() {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     dietary_preferences: [] as string[],
-    max_cooking_time: null as number | null
+    max_cooking_time: null as number | null,
+    allow_external_ingredients: false
   });
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,6 +36,7 @@ export default function Home() {
           ingredients,
           dietary_preferences: filters.dietary_preferences.length > 0 ? filters.dietary_preferences : undefined,
           max_cooking_time: filters.max_cooking_time || undefined,
+          allow_external_ingredients: filters.allow_external_ingredients,
         }),
       });
 
@@ -55,7 +57,8 @@ export default function Home() {
     setIngredients([]);
     setFilters({
       dietary_preferences: [],
-      max_cooking_time: null
+      max_cooking_time: null,
+      allow_external_ingredients: false
     });
     setRecipe(null);
     setError(null);

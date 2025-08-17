@@ -3,8 +3,8 @@
 import { FilterOptions as FilterOptionsType } from '@/types/recipe';
 
 interface FilterOptionsProps {
-  filters: FilterOptionsType;
-  onFiltersChange: (filters: FilterOptionsType) => void;
+  filters: FilterOptionsType & { allow_external_ingredients: boolean };
+  onFiltersChange: (filters: FilterOptionsType & { allow_external_ingredients: boolean }) => void;
 }
 
 const dietaryOptions = [
@@ -45,6 +45,26 @@ export default function FilterOptions({ filters, onFiltersChange }: FilterOption
 
   return (
     <div className="space-y-6">
+      {/* External Ingredients Toggle */}
+      <div>
+        <label className="flex items-center justify-between cursor-pointer">
+          <span className="text-lg font-semibold text-gray-700">Suggest recipes with extra ingredients?</span>
+          <div className="relative">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={filters.allow_external_ingredients}
+              onChange={(e) => onFiltersChange({ ...filters, allow_external_ingredients: e.target.checked })}
+            />
+            <div className="block bg-gray-200 peer-checked:bg-orange-500 w-14 h-8 rounded-full transition-colors"></div>
+            <div className="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform peer-checked:translate-x-6"></div>
+          </div>
+        </label>
+        <p className="text-sm text-gray-500 mt-1">
+          If enabled, we'll suggest recipes that might require a few extra items, and we'll provide a shopping list for them.
+        </p>
+      </div>
+
       {/* Dietary Preferences */}
       <div>
         <h3 className="text-lg font-semibold text-gray-700 mb-3">Dietary Preferences:</h3>

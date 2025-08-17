@@ -1,9 +1,10 @@
 fastapi
-pydantic
-sqlalchemy
-alembic
 uvicorn
+pydantic
 python-dotenv
+sqlalchemy
+psycopg2-binary
 langgraph
 langchain-google-genai
-google-genai 
+google-generativeai
+langchain 

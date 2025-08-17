@@ -90,6 +90,26 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
         </ol>
       </div>
 
+      {/* Shopping List */}
+      {recipe.shopping_list && recipe.shopping_list.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h4 className="text-xl font-semibold text-blue-800 mb-4 flex items-center gap-2">
+            🛒 Shopping List
+          </h4>
+          <ul className="space-y-2">
+            {recipe.shopping_list.map((item, index) => (
+              <li
+                key={index}
+                className="flex items-start gap-3 text-gray-700"
+              >
+                <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Recipe Summary */}
       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
         <h4 className="text-lg font-semibold text-orange-800 mb-2">Recipe Summary</h4>

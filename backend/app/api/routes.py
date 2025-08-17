@@ -12,6 +12,7 @@ class IngredientRequest(BaseModel):
     ingredients: List[str]
     dietary_preferences: Optional[List[str]] = None
     max_cooking_time: Optional[int] = None
+    allow_external_ingredients: bool = False
 
 class RecipeResponse(BaseModel):
     title: str
@@ -21,6 +22,7 @@ class RecipeResponse(BaseModel):
     difficulty: str
     servings: int
     tags: List[str]
+    shopping_list: Optional[List[str]] = None
 
 class UserCreateResponse(BaseModel):
     user_id: int
@@ -39,7 +41,8 @@ async def recommend_recipe(
         recipe = await recipe_service.get_recipe_recommendation(
             ingredients=request.ingredients,
             dietary_preferences=request.dietary_preferences,
-            max_cooking_time=request.max_cooking_time
+            max_cooking_time=request.max_cooking_time,
+            allow_external_ingredients=request.allow_external_ingredients
         )
         return recipe
     except Exception as e:

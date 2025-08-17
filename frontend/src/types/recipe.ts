@@ -6,6 +6,7 @@ export interface Recipe {
   difficulty: string;
   servings: number;
   tags: string[];
+  shopping_list?: string[];
 }
 
 export interface IngredientRequest {
