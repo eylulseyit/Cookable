@@ -13,7 +13,20 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from .vector_store_service import get_vector_store_service
 
+# New imports for the Agent
+from langchain.agents import Tool, AgentExecutor, create_react_agent
+from langchain_experimental.agents.agent_toolkits import create_python_agent
+from langchain import hub
+
+
 _recipe_service_instance = None
+
+
+def _clean_json_response(response_text: str) -> str:
+    """Helper function to clean up JSON response from LLM."""
+    if response_text.strip().startswith("```json"):
+        response_text = response_text.strip()[7:-4].strip()
+    return response_text
 
 
 class RecipeService:
@@ -65,6 +78,33 @@ class RecipeService:
         """
         self.variation_prompt = PromptTemplate(template=variation_template, input_variables=["title", "ingredients"])
         self.variation_chain = LLMChain(llm=self.llm, prompt=self.variation_prompt)
+
+        # --- Agent Tools Setup ---
+        self.tools = [
+            Tool(
+                name="get_recipe_variations",
+                func=self.get_recipe_variations,
+                description="Use this tool to get creative variations for a given recipe title and its ingredients. The input should be a dictionary with 'title' and 'ingredients' keys."
+            ),
+            Tool(
+                name="get_drink_pairing",
+                func=self.get_drink_pairing,
+                description="Use this tool to get drink pairing suggestions for a given recipe title. The input should be a string containing the recipe title."
+            ),
+            Tool(
+                name="get_presentation_tips",
+                func=self.get_presentation_tips,
+                description="Use this tool to get tips on how to present a dish based on its title. The input should be a string containing the recipe title."
+            )
+        ]
+
+        # -- Agent Setup --
+        # Using a ReAct agent, which is good for reasoning and tool use.
+        # The prompt is pulled from LangChain Hub to ensure it's well-tested.
+        react_prompt = hub.pull("hwchase17/react")
+        self.agent = create_react_agent(self.llm, self.tools, react_prompt)
+        self.agent_executor = AgentExecutor(agent=self.agent, tools=self.tools, verbose=True)
+
 
         self.common_ingredients = [
             "onion", "garlic", "tomato", "potato", "carrot", "bell pepper",
@@ -188,7 +228,60 @@ Do not include any text, explanation, or markdown formatting outside of the JSON
             return data.get("variations", [])
         except (json.JSONDecodeError, KeyError):
             return []
-    
+
+    async def get_presentation_tips(self, recipe_title: str) -> str:
+        """Generates presentation tips for a given recipe."""
+        prompt_template = PromptTemplate(
+            template="""
+            You are a food stylist. Provide three concise, actionable presentation tips for a dish called '{recipe_title}'.
+            Focus on simple techniques a home cook can use.
+            Your response should be a single string with tips separated by newlines.
+            Example:
+            - Garnish with fresh parsley before serving.
+            - Serve on a contrasting colored plate to make the colors pop.
+            - Wipe the rim of the plate for a clean, professional look.
+            """,
+            input_variables=["recipe_title"]
+        )
+        chain = LLMChain(llm=self.llm, prompt=prompt_template)
+        response = await chain.ainvoke({"recipe_title": recipe_title})
+        return response['text'].strip()
+
+    async def get_drink_pairing(self, recipe_title: str) -> str:
+        """Generates drink pairing suggestions for a given recipe."""
+        prompt_template = PromptTemplate(
+            template="""
+            You are a sommelier. Suggest one alcoholic and one non-alcoholic drink pairing for a dish called '{recipe_title}'.
+            Provide a brief (1-sentence) explanation for each suggestion.
+            Your response should be a single string.
+            Example:
+            - Alcoholic: A crisp Sauvignon Blanc. Its acidity cuts through the richness of the dish.
+            - Non-Alcoholic: A sparkling lemonade with mint. It provides a refreshing contrast.
+            """,
+            input_variables=["recipe_title"]
+        )
+        chain = LLMChain(llm=self.llm, prompt=prompt_template)
+        response = await chain.ainvoke({"recipe_title": recipe_title})
+        return response['text'].strip()
+        
+    async def run_gourmet_assistant_agent(self, recipe_title: str, query: str) -> str:
+        """Runs the gourmet assistant agent to get suggestions based on a user query."""
+        prompt = f"""
+        You are the Gourmet Assistant Agent.
+        The user has just received a recipe for "{recipe_title}".
+        Their question or request is: "{query}"
+
+        Based on their request, decide which of your available tools to use to provide the best answer.
+        """
+        try:
+            response = await self.agent_executor.ainvoke({
+                "input": prompt
+            })
+            return response.get("output", "I'm not sure how to answer that.")
+        except Exception as e:
+            print(f"Agent execution error: {e}")
+            return "Sorry, I encountered an error while processing your request."
+
     async def get_recipe_recommendation(
         self, 
         ingredients: List[str], 
@@ -221,17 +314,17 @@ Do not include any text, explanation, or markdown formatting outside of the JSON
             print("--- Searching for similar recipes in vector store ---")
             vector_store = get_vector_store_service()
             similar_recipe = vector_store.search_similar_recipes(ingredients=ingredients, similarity_threshold=1.0) # Using a high threshold for now to test
+            # similar_recipe = None # Temporarily disable vector store search
             
             if similar_recipe:
                 print("--- Found a similar recipe in vector store, returning it. ---")
                 
                 # If external ingredients are allowed, we might still need to generate a shopping list
                 # for the cached recipe.
-                if allow_external_ingredients:
-                    shopping_list = await self._generate_shopping_list(
-                        user_ingredients=ingredients, recipe_ingredients=similar_recipe.ingredients
-                    )
-                    similar_recipe.shopping_list = shopping_list
+                shopping_list = await self._generate_shopping_list(
+                    user_ingredients=ingredients, recipe_ingredients=similar_recipe.ingredients
+                )
+                similar_recipe.shopping_list = shopping_list
                 
                 return similar_recipe
 
@@ -270,15 +363,12 @@ Do not include any text, explanation, or markdown formatting outside of the JSON
             vector_store = get_vector_store_service()
             vector_store.add_recipe(recipe)
 
-            # Generate shopping list only if external ingredients are allowed
-            if allow_external_ingredients:
-                shopping_list = await self._generate_shopping_list(
-                    user_ingredients=ingredients,
-                    recipe_ingredients=recipe.ingredients
-                )
-                recipe.shopping_list = shopping_list
-            else:
-                recipe.shopping_list = []
+            # Always generate a shopping list to see if any specific ingredients are needed
+            shopping_list = await self._generate_shopping_list(
+                user_ingredients=ingredients,
+                recipe_ingredients=recipe.ingredients
+            )
+            recipe.shopping_list = shopping_list
 
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             print(f"!!! FAILED TO PARSE LLM RESPONSE !!!")

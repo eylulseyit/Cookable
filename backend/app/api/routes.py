@@ -37,6 +37,14 @@ class UserCreateResponse(BaseModel):
     user_id: int
     message: str
 
+# New models for the agent endpoint
+class AgentRequest(BaseModel):
+    recipe_title: str
+    query: str
+
+class AgentResponse(BaseModel):
+    response: str
+
 @router.post("/recipes/recommend", response_model=RecipeResponse)
 async def recommend_recipe(
     request: IngredientRequest,
@@ -75,6 +83,24 @@ async def get_recipe_variations(
         return variations
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating variations: {str(e)}")
+
+@router.post("/agent/invoke", response_model=AgentResponse)
+async def invoke_agent(
+    request: AgentRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Invokes the Gourmet Assistant Agent to get smart suggestions about a recipe.
+    """
+    try:
+        recipe_service = RecipeService(db)
+        agent_response = await recipe_service.run_gourmet_assistant_agent(
+            recipe_title=request.recipe_title,
+            query=request.query
+        )
+        return AgentResponse(response=agent_response)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error invoking agent: {str(e)}")
 
 @router.post("/users/create", response_model=UserCreateResponse)
 async def create_user(db: Session = Depends(get_db)):

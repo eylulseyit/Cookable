@@ -168,25 +168,6 @@ export default function RecipeDisplay({ recipe, onRecipeUpdate }: RecipeDisplayP
         </div>
       )}
 
-      {/* Recipe Summary */}
-      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-        <h4 className="text-lg font-semibold text-orange-800 mb-2">Recipe Summary</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{recipe.cooking_time}</div>
-            <div className="text-gray-600">Minutes</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{recipe.servings}</div>
-            <div className="text-gray-600">Servings</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{recipe.ingredients.length}</div>
-            <div className="text-gray-600">Ingredients</div>
-          </div>
-        </div>
-      </div>
-
       {/* Variations Section */}
       <div className="text-center mt-6">
         <button

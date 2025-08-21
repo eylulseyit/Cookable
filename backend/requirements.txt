@@ -5,6 +5,7 @@ sqlalchemy
 python-dotenv
 langchain
 langchain-google-genai
+langchain_experimental
 google-generativeai
 chromadb
 sentence-transformers 

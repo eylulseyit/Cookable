@@ -45,4 +45,20 @@ export class ApiService {
       return false;
     }
   }
+
+  static async getAgentSuggestion(recipe_title: string, query: string): Promise<string> {
+    const response = await fetch(`${API_BASE_URL}/agent/invoke`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipe_title, query }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Failed to get suggestion from agent.');
+    }
+
+    const data = await response.json();
+    return data.response;
+  }
 } 
