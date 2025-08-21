@@ -125,12 +125,12 @@ CapstoneProject/
     *   Core feature development (Ingredient Input -> AI Recipe Output).
     *   Google Gemini LLM integration.
 
--   **Phase 3: Automation and Agent Logic (Completed)**
+-   **Phase 3: Automation and Agent Logic (Half-Working)**
     *   Recipe analysis and shopping list generation implemented.
     *   Advanced "Gourmet Assistant Agent" using LangChain, including: Recipe Variation Tool, Drink Pairing Tool, and Presentation Tip Tool.
     *   Agent API endpoint and frontend integration (buttons, modern UI for results).
 
--   **Phase 4: RAG or Fine-tuning Implementation (Completed)**
+-   **Phase 4: RAG or Fine-tuning Implementation (Broken)**
     *   VectorDB integration (ChromaDB) to store existing recipes.
     *   Retrieval-Augmented Generation (RAG) system to find best matching recipes based on user ingredients from VectorDB.
 
