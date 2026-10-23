@@ -1,10 +1,76 @@
 @import "tailwindcss";
 
-@theme {
+/*
+ * Color tokens. Components only use the semantic names below (bg-surface,
+ * text-muted, ...), so each theme is defined once here.
+ */
+:root {
+  color-scheme: light;
+  --bg: #fef3e2;
+  --surface: #fffaf3;
+  --line: #f2c478;
+  --field: #ffffff;
+  --field-line: #ebc07e;
+  --fg: #2a1a0e;
+  --muted: #6b5440;
+  --accent: #c27000;
+  --accent-text: #8f5a0e;
+  --primary: #f4ae52;
+  --on-primary: #2a1a0e;
+  --strong: #2a1a0e;
+  --on-strong: #fef3e2;
+  --selected: #f4ae52;
+  --on-selected: #2a1a0e;
+  --tag: #2a1a0e;
+  --on-tag: #fef3e2;
+  --danger: #b42318;
+}
+
+:root.dark {
+  color-scheme: dark;
+  --bg: #2a1a0e;
+  --surface: #3a2617;
+  --line: #3a2617;
+  --field: #2a1a0e;
+  --field-line: #5a3f28;
+  --fg: #fef3e2;
+  --muted: #c9b29a;
+  --accent: #f4ae52;
+  --accent-text: #f4ae52;
+  --primary: #f4ae52;
+  --on-primary: #2a1a0e;
+  --strong: #f4ae52;
+  --on-strong: #2a1a0e;
+  --selected: #fef3e2;
+  --on-selected: #2a1a0e;
+  --tag: #5a3f28;
+  --on-tag: #fef3e2;
+  --danger: #fda29b;
+}
+
+@theme inline {
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-field: var(--field);
+  --color-field-line: var(--field-line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-strong: var(--strong);
+  --color-on-strong: var(--on-strong);
+  --color-selected: var(--selected);
+  --color-on-selected: var(--on-selected);
+  --color-tag: var(--tag);
+  --color-on-tag: var(--on-tag);
+  --color-danger: var(--danger);
 }
 
 body {
-  background: #fff7ed;
-  color: #171717;
+  @apply bg-bg text-fg;
 }
