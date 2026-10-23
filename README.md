@@ -17,7 +17,7 @@ Cookable turns the ingredients you already have into a recipe. Enter what's in y
 
 | Layer | Technologies |
 |---|---|
-| Frontend | Next.js 15 (static export), React 19, TypeScript, Tailwind CSS 4 |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS 4 |
 | Backend | Python 3.12, FastAPI, Pydantic, SQLAlchemy, SQLite |
 | AI | Google Gemini (`gemini-2.5-flash`) via LangChain |
 | Testing | pytest with a fake LLM (no API key or network needed) |
@@ -27,13 +27,13 @@ Cookable turns the ingredients you already have into a recipe. Enter what's in y
 
 ```mermaid
 flowchart LR
-    U[Browser] -->|static files| F[Frontend<br/>Next.js static export<br/>served by nginx]
+    U[Browser] -->|static files| F[Frontend<br/>React SPA built with Vite<br/>served by nginx]
     U -->|REST /api/v1| B[Backend<br/>FastAPI]
     B -->|structured output| G[Google Gemini]
     B --> D[(SQLite)]
 ```
 
-The frontend is a fully client-side Next.js app exported to static files, so it can be served by any static host. All AI work happens in the FastAPI backend, which keeps the API key on the server.
+The frontend is a fully client-side React app that Vite builds to static files, so it can be served by any static host. All AI work happens in the FastAPI backend, which keeps the API key on the server.
 
 ## Quick Start (Docker / Podman)
 
@@ -79,7 +79,7 @@ pnpm install
 pnpm dev
 ```
 
-The frontend calls `http://localhost:8000/api/v1` by default. Set `NEXT_PUBLIC_API_URL` (see `frontend/.env.example`) to point it elsewhere.
+The frontend calls `http://localhost:8000/api/v1` by default. Set `VITE_API_URL` (see `frontend/.env.example`) to point it elsewhere.
 
 ## Configuration
 
@@ -143,7 +143,7 @@ Cookable/
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
-│   │   ├── app/          # Next.js App Router pages
+│   │   ├── App.tsx       # Root component
 │   │   ├── components/   # React components
 │   │   ├── services/     # API client
 │   │   └── types/        # TypeScript types
