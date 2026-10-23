@@ -71,12 +71,17 @@ class Recipe(Base):
 
     id: Mapped[int] = id_column()
     title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[Optional[str]] = mapped_column(Text)
     servings: Mapped[Optional[int]]
     cooking_time_minutes: Mapped[Optional[int]]
     difficulty: Mapped[Optional[str]] = mapped_column(String(20))
     # Ordered list of instruction strings; always read together with the recipe
     steps: Mapped[list[str]] = mapped_column(JSONB, default=list)
     source: Mapped[str] = mapped_column(String(20))
+    # The LLM call that generated this recipe, if any
+    llm_request_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("llm_requests.id", ondelete="SET NULL"), index=True
+    )
     created_at: Mapped[datetime] = created_at_column()
 
     ingredients: Mapped[list["RecipeIngredient"]] = relationship(
@@ -110,7 +115,7 @@ class LLMRequest(Base):
 
     id: Mapped[int] = id_column(BigInteger)
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
-    # What the call was for, e.g. "recipe" or "shopping_list"
+    # What the call was for, e.g. "recipe_suggestions"
     operation: Mapped[str] = mapped_column(String(50))
     model: Mapped[str] = mapped_column(String(100))
     input: Mapped[dict[str, Any]] = mapped_column(JSONB)
@@ -118,7 +123,7 @@ class LLMRequest(Base):
     input_tokens: Mapped[Optional[int]]
     output_tokens: Mapped[Optional[int]]
     error: Mapped[Optional[str]] = mapped_column(Text)
-    recipe_id: Mapped[Optional[int]] = mapped_column(ForeignKey("recipes.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = created_at_column()
 
     user: Mapped[Optional[User]] = relationship(back_populates="llm_requests")
+    recipes: Mapped[list[Recipe]] = relationship()

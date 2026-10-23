@@ -1,20 +1,13 @@
 import uuid
 from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel, Field
-from typing import List, Optional
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.models.recipe import Recipe
+from app.models.recipe import RecipeRequest, RecipeSuggestions
 from app.services.recipe_service import RecipeService, LLMConfigurationError, RecipeGenerationError
 from app.core.database import get_db
 from app.services.database_service import DatabaseService
 
 router = APIRouter()
-
-class IngredientRequest(BaseModel):
-    ingredients: List[str] = Field(min_length=1, max_length=30)
-    dietary_preferences: Optional[List[str]] = None
-    max_cooking_time: Optional[int] = Field(default=None, gt=0, le=600)
-    allow_external_ingredients: bool = False
 
 class UserCreateResponse(BaseModel):
     user_id: uuid.UUID
@@ -23,29 +16,26 @@ class UserCreateResponse(BaseModel):
 def get_recipe_service(db: Session = Depends(get_db)) -> RecipeService:
     return RecipeService(db)
 
-@router.post("/recipes/recommend", response_model=Recipe)
-async def recommend_recipe(
-    request: IngredientRequest,
+@router.post("/recipes/recommend", response_model=RecipeSuggestions)
+async def recommend_recipes(
+    request: RecipeRequest,
     recipe_service: RecipeService = Depends(get_recipe_service)
 ):
     """
-    Get recipe recommendations based on available ingredients
+    Suggest one or more recipes based on available ingredients and filters
     """
     ingredients = [i.strip().lower() for i in request.ingredients if i.strip()]
     if not ingredients:
         raise HTTPException(status_code=422, detail="Please provide at least one ingredient.")
+    request = request.model_copy(update={"ingredients": ingredients})
 
     try:
-        return await recipe_service.get_recipe_recommendation(
-            ingredients=ingredients,
-            dietary_preferences=request.dietary_preferences,
-            max_cooking_time=request.max_cooking_time,
-            allow_external_ingredients=request.allow_external_ingredients
-        )
+        recipes = await recipe_service.get_recipe_suggestions(request)
     except LLMConfigurationError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except RecipeGenerationError as e:
         raise HTTPException(status_code=502, detail=str(e))
+    return RecipeSuggestions(recipes=recipes)
 
 @router.post("/users/create", response_model=UserCreateResponse)
 async def create_user(db: Session = Depends(get_db)):

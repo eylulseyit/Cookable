@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from main import app
 from app.api.routes import get_recipe_service
 from app.core.database import Base, engine, get_db
-from app.models.recipe import GeneratedRecipe, ShoppingList
+from app.models.recipe import Recipe, RecipeSuggestions
 from app.services.recipe_service import RecipeService
 
 
@@ -75,23 +75,31 @@ class FakeLLM:
         return self.structured[schema]
 
 
-SAMPLE_RECIPE = GeneratedRecipe(
-    title="Garlic Tomato Pasta",
-    ingredients=["200g pasta", "3 tomatoes", "2 cloves garlic", "fresh basil"],
-    instructions=["Boil pasta", "Make sauce", "Combine"],
-    cooking_time=20,
-    difficulty="Easy",
-    servings=2,
-    tags=["pasta", "vegetarian"],
-)
+def make_recipe(title: str, shopping_list: list[str] | None = None) -> Recipe:
+    return Recipe(
+        title=title,
+        description=f"A quick {title.lower()}.",
+        ingredients=["200g pasta", "3 tomatoes", "2 cloves garlic", "fresh basil"],
+        instructions=["Boil pasta", "Make sauce", "Combine"],
+        cooking_time=20,
+        difficulty="Easy",
+        servings=2,
+        tags=["pasta", "vegetarian"],
+        shopping_list=shopping_list or [],
+    )
+
+
+SAMPLE_SUGGESTIONS = RecipeSuggestions(recipes=[
+    make_recipe("Garlic Tomato Pasta", ["fresh basil"]),
+    make_recipe("Pasta Puttanesca", ["olives", "capers"]),
+    make_recipe("Tomato Orzo"),
+])
 
 
 @pytest.fixture
 def fake_llm():
-    return FakeLLM({
-        GeneratedRecipe: SAMPLE_RECIPE,
-        ShoppingList: ShoppingList(shopping_list=["fresh basil"]),
-    })
+    # A deep copy per test, because the service edits the recipes it gets back
+    return FakeLLM({RecipeSuggestions: SAMPLE_SUGGESTIONS.model_copy(deep=True)})
 
 
 @pytest.fixture
