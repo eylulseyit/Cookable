@@ -1,4 +1,10 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Card, StepHeading } from '@/components/ui/Card';
+import { RemovableChip } from '@/components/ui/Chip';
+import { fieldClass } from '@/components/ui/field';
+
+const QUICK_ADD = ['onion', 'garlic', 'tomato', 'chicken', 'rice', 'pasta', 'egg', 'cheese'];
 
 interface IngredientInputProps {
   ingredients: string[];
@@ -8,94 +14,66 @@ interface IngredientInputProps {
 export default function IngredientInput({ ingredients, onIngredientsChange }: IngredientInputProps) {
   const [inputValue, setInputValue] = useState('');
 
-  const handleAddIngredient = () => {
-    const trimmedValue = inputValue.trim();
-    if (trimmedValue && !ingredients.includes(trimmedValue.toLowerCase())) {
-      onIngredientsChange([...ingredients, trimmedValue.toLowerCase()]);
-      setInputValue('');
+  const add = (name: string) => {
+    const ingredient = name.trim().toLowerCase();
+    if (ingredient && !ingredients.includes(ingredient)) {
+      onIngredientsChange([...ingredients, ingredient]);
     }
   };
 
-  const handleRemoveIngredient = (ingredient: string) => {
-    const newIngredients = ingredients.filter((i) => i !== ingredient);
-    onIngredientsChange(newIngredients);
+  const remove = (ingredient: string) => {
+    onIngredientsChange(ingredients.filter((i) => i !== ingredient));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleAddIngredient();
-    }
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    add(inputValue);
+    setInputValue('');
   };
 
   return (
-    <div className="space-y-4">
-      {/* Input Field */}
-      <div className="flex gap-2">
+    <Card>
+      <StepHeading step={1} title="Your ingredients" />
+
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <label htmlFor="ingredient" className="sr-only">Ingredient</label>
         <input
+          id="ingredient"
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          aria-label="Ingredient"
-          placeholder="Enter an ingredient (e.g., chicken, tomato, rice)"
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          placeholder="Add an ingredient, e.g. chickpeas"
+          className={`h-13 min-w-0 flex-1 px-4.5 text-base ${fieldClass}`}
         />
-        <button
-          type="button"
-          onClick={handleAddIngredient}
-          disabled={!inputValue.trim()}
-          className="px-6 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors duration-200"
-        >
+        <Button type="submit" disabled={!inputValue.trim()} className="h-13 px-6">
           Add
-        </button>
-      </div>
+        </Button>
+      </form>
 
-      {/* Ingredients List */}
       {ingredients.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-3">Your Ingredients:</h3>
-          <div className="flex flex-wrap gap-2">
-            {ingredients.map((ingredient) => (
-              <div
-                key={ingredient}
-                className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 py-1 rounded-full"
-              >
-                <span className="text-sm font-medium">{ingredient}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveIngredient(ingredient)}
-                  aria-label={`Remove ${ingredient}`}
-                  className="text-orange-600 hover:text-orange-800 text-lg font-bold"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-2">
+          {ingredients.map((ingredient) => (
+            <RemovableChip key={ingredient} label={ingredient} onRemove={() => remove(ingredient)} />
+          ))}
         </div>
       )}
 
-      {/* Quick Add Suggestions */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Quick Add Common Ingredients:</h3>
+      <div className="flex flex-col gap-2.5">
+        <span className="text-sm text-muted">Quick add</span>
         <div className="flex flex-wrap gap-2">
-          {['onion', 'garlic', 'tomato', 'chicken', 'rice', 'pasta', 'egg', 'cheese'].map((suggestion) => (
+          {QUICK_ADD.map((name) => (
             <button
               type="button"
-              key={suggestion}
-              onClick={() => {
-                if (!ingredients.includes(suggestion)) {
-                  onIngredientsChange([...ingredients, suggestion]);
-                }
-              }}
-              disabled={ingredients.includes(suggestion)}
-              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 text-gray-700 rounded-full text-sm transition-colors duration-200"
+              key={name}
+              onClick={() => add(name)}
+              disabled={ingredients.includes(name)}
+              className="h-9 rounded-[10px] border border-field-line bg-field px-3.5 text-sm transition-opacity disabled:opacity-40"
             >
-              {suggestion}
+              + {name}
             </button>
           ))}
         </div>
       </div>
-    </div>
+    </Card>
   );
-} 
+}

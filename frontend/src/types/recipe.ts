@@ -19,4 +19,5 @@ export interface IngredientRequest {
 export interface FilterOptions {
   dietary_preferences: string[];
   max_cooking_time: number | null;
+  allow_external_ingredients: boolean;
 }

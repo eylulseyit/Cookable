@@ -1,17 +1,21 @@
 import { useState } from 'react';
+import FilterOptions from '@/components/FilterOptions';
 import IngredientInput from '@/components/IngredientInput';
 import RecipeDisplay from '@/components/RecipeDisplay';
-import FilterOptions from '@/components/FilterOptions';
-import { Recipe } from '@/types/recipe';
+import ThemeToggle from '@/components/ThemeToggle';
+import { Button } from '@/components/ui/Button';
 import { ApiService } from '@/services/api';
+import type { FilterOptions as Filters, Recipe } from '@/types/recipe';
+
+const DEFAULT_FILTERS: Filters = {
+  dietary_preferences: [],
+  max_cooking_time: null,
+  allow_external_ingredients: false,
+};
 
 export default function App() {
   const [ingredients, setIngredients] = useState<string[]>([]);
-  const [filters, setFilters] = useState({
-    dietary_preferences: [] as string[],
-    max_cooking_time: null as number | null,
-    allow_external_ingredients: false
-  });
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,95 +46,51 @@ export default function App() {
 
   const handleReset = () => {
     setIngredients([]);
-    setFilters({
-      dietary_preferences: [],
-      max_cooking_time: null,
-      allow_external_ingredients: false
-    });
+    setFilters(DEFAULT_FILTERS);
     setRecipe(null);
     setError(null);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            🍳 Cookable
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Enter your available ingredients and get AI-powered recipe suggestions
-          </p>
-        </div>
-
-        {/* Main Content */}
-        <div className="max-w-4xl mx-auto">
-          {/* Step 1: Ingredient Input */}
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-              1️⃣ Enter Your Ingredients
-            </h2>
-            <IngredientInput
-              ingredients={ingredients}
-              onIngredientsChange={setIngredients}
-            />
+    <div className="min-h-screen px-4 pt-14 pb-20 sm:px-6">
+      <main className="mx-auto flex max-w-3xl flex-col gap-6">
+        <header className="flex items-start justify-between gap-4 pb-5">
+          <div className="flex flex-col gap-3.5">
+            <h1 className="text-6xl leading-none font-extrabold tracking-tighter sm:text-7xl">
+              Cook<span className="text-accent">able</span>
+            </h1>
+            <p className="text-lg text-muted">Your ingredients in. A recipe out.</p>
           </div>
+          <ThemeToggle />
+        </header>
 
-          {/* Step 2: Filter Options */}
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-              2️⃣ Optional Filters
-            </h2>
-            <FilterOptions
-              filters={filters}
-              onFiltersChange={setFilters}
-            />
+        <IngredientInput ingredients={ingredients} onIngredientsChange={setIngredients} />
+        <FilterOptions filters={filters} onFiltersChange={setFilters} />
+
+        <Button
+          variant="primary"
+          onClick={handleGetRecipe}
+          disabled={loading || ingredients.length === 0}
+          className="h-16 text-xl tracking-tight"
+        >
+          {loading ? 'Cooking up a recipe...' : 'Get my recipe →'}
+        </Button>
+
+        {error && (
+          <div role="alert" className="rounded-xl border-2 border-danger bg-surface px-4 py-3 font-medium text-danger">
+            {error}
           </div>
+        )}
 
-          {/* Step 3: Get Recipe Button */}
-          <div className="text-center mb-6">
-            <button
-              type="button"
-              onClick={handleGetRecipe}
-              disabled={loading || ingredients.length === 0}
-              className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors duration-200"
-            >
-              {loading ? '🍳 Cooking up a recipe...' : '🍽️ Get Recipe Recommendation'}
-            </button>
-          </div>
-
-          {/* Error Display */}
-          {error && (
-            <div role="alert" className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-              {error}
-            </div>
-          )}
-
-          {/* Step 4: Recipe Display */}
-          {recipe && (
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-                3️⃣ Your Recipe
-              </h2>
-              <RecipeDisplay recipe={recipe} />
-            </div>
-          )}
-
-          {/* Reset Button */}
-          {recipe && (
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors duration-200"
-              >
-                🔄 Start Over
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+        {recipe && (
+          <>
+            <RecipeDisplay recipe={recipe} />
+            <Button variant="outline" onClick={handleReset} className="h-12 self-center px-6">
+              Start over
+            </Button>
+          </>
+        )}
+      </main>
     </div>
   );
 }
