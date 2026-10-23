@@ -13,9 +13,10 @@ export interface IngredientRequest {
   ingredients: string[];
   dietary_preferences?: string[];
   max_cooking_time?: number;
+  allow_external_ingredients?: boolean;
 }
 
 export interface FilterOptions {
   dietary_preferences: string[];
   max_cooking_time: number | null;
-} 
+}

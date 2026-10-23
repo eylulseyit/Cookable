@@ -1,12 +1,11 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from app.core.config import settings
 
-# For SQLite, we need to add connect_args
-engine = create_engine(
-    settings.DATABASE_URL, connect_args={"check_same_thread": False}
-)
+# SQLite needs check_same_thread disabled because FastAPI may use the
+# session from a different thread than the one that created it
+connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -20,4 +19,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close() 
+        db.close()

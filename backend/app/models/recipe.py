@@ -1,18 +1,25 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 
-class Recipe(BaseModel):
-    title: str
-    ingredients: List[str]
-    instructions: List[str]
-    cooking_time: int  # in minutes
-    difficulty: str  # Easy, Medium, Hard
-    servings: int
-    tags: List[str]  # e.g., ["vegetarian", "quick", "pasta"]
+class GeneratedRecipe(BaseModel):
+    """Recipe fields produced by the LLM."""
+    title: str = Field(description="The name of the recipe")
+    ingredients: List[str] = Field(description="All ingredients required, including quantities")
+    instructions: List[str] = Field(description="Step-by-step preparation instructions")
+    cooking_time: int = Field(description="Total cooking time in minutes")
+    difficulty: str = Field(description="Difficulty level: Easy, Medium or Hard")
+    servings: int = Field(description="How many people the recipe serves")
+    tags: List[str] = Field(description='Relevant tags, e.g. "vegetarian", "quick", "dinner"')
+
+class ShoppingList(BaseModel):
+    """Ingredients the user still needs to buy."""
+    shopping_list: List[str] = Field(description="Recipe ingredients the user does not have, without quantities")
+
+class Recipe(GeneratedRecipe):
     shopping_list: Optional[List[str]] = None
-    
-    class Config:
-        json_schema_extra = {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "title": "Pasta with Tomato Sauce",
                 "ingredients": [
@@ -35,6 +42,8 @@ class Recipe(BaseModel):
                 "cooking_time": 20,
                 "difficulty": "Easy",
                 "servings": 2,
-                "tags": ["pasta", "vegetarian", "quick"]
+                "tags": ["pasta", "vegetarian", "quick"],
+                "shopping_list": []
             }
-        } 
+        }
+    )
