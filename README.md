@@ -1,145 +1,157 @@
-# AI-Powered Recipe Recommendation App
+# Cookable
 
-## 🍳 Recipe Recommendation App
+[![CI](https://github.com/eylulseyit/Cookable/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/eylulseyit/Cookable/actions/workflows/ci.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
-An AI-powered recipe recommendation application that suggests recipes based on available ingredients, with advanced AI assistant features and shopping list generation.
+Cookable turns the ingredients you already have into a recipe. Enter what's in your kitchen, pick optional filters, and Google Gemini generates a complete recipe, plus a shopping list if you allow a few extra ingredients.
 
-## ✨ Key Features
+## Features
 
-- **AI-Powered Recipe Generation**: Get unique recipes based on ingredients you have.
-- **Gourmet Assistant Agent**: Ask for recipe variations, drink pairings, and presentation tips.
-- **Shopping List Generation**: Automatically generate a shopping list for missing ingredients.
-- **Retrieval-Augmented Generation (RAG)**: Efficiently retrieve similar recipes from a vector database.
+- **Ingredient-based recipes**: add ingredients one by one or from quick-add suggestions
+- **Filters**: dietary preferences (vegetarian, vegan, gluten-free, ...) and a maximum cooking time
+- **Shopping list**: when extra ingredients are allowed, a second step compares the recipe with what you have and lists what to buy
+- **Reliable AI output**: recipes are generated with LangChain structured output, so Gemini's response is validated against a Pydantic schema instead of parsed by hand
+- **Graceful failure handling**: clear 422 / 502 / 503 errors, and the recipe is still returned if only the shopping list step fails
 
-## 🚀 Tech Stack
+## Tech Stack
 
-- **Backend**: Python 3.12 + FastAPI
-- **Frontend**: Next.js (React) + TypeScript + TailwindCSS
-- **AI**: Google Gemini LLM + LangChain
-- **Database**: SQLite
-- **Vector Database**: ChromaDB
-- **Deployment**: Vercel (Frontend) + Railway (Backend) (Planned for Phase 5)
+| Layer | Technologies |
+|---|---|
+| Frontend | Next.js 15 (static export), React 19, TypeScript, Tailwind CSS 4 |
+| Backend | Python 3.12, FastAPI, Pydantic, SQLAlchemy, SQLite |
+| AI | Google Gemini (`gemini-2.5-flash`) via LangChain |
+| Testing | pytest with a fake LLM (no API key or network needed) |
+| Tooling | pnpm, Docker / Podman, Docker Compose, GitHub Actions |
 
-## 📁 Project Structure
+## Architecture
+
+```mermaid
+flowchart LR
+    U[Browser] -->|static files| F[Frontend<br/>Next.js static export<br/>served by nginx]
+    U -->|REST /api/v1| B[Backend<br/>FastAPI]
+    B -->|structured output| G[Google Gemini]
+    B --> D[(SQLite)]
+```
+
+The frontend is a fully client-side Next.js app exported to static files, so it can be served by any static host. All AI work happens in the FastAPI backend, which keeps the API key on the server.
+
+## Quick Start (Docker / Podman)
+
+**Prerequisites:** Docker or Podman with Compose, and a free [Gemini API key](https://aistudio.google.com/apikey).
+
+```bash
+git clone https://github.com/eylulseyit/Cookable.git
+cd Cookable
+
+cp backend/.env.example backend/.env
+# Open backend/.env and set GOOGLE_API_KEY
+
+docker compose up --build        # or: podman compose up --build
+```
+
+- App: http://localhost:3000
+- API docs (Swagger UI): http://localhost:8000/docs
+
+Stop with `Ctrl+C`, then `docker compose down`. Recipe data is kept in a named volume between runs.
+
+## Local Development
+
+Run the backend and frontend in two terminals for hot reload.
+
+**Backend** (Python 3.12+):
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+cp .env.example .env             # then set GOOGLE_API_KEY
+uvicorn main:app --reload
+```
+
+Optionally seed the database with sample ingredients and tags: `python init_db.py`.
+
+**Frontend** (Node.js 22+, pnpm):
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+The frontend calls `http://localhost:8000/api/v1` by default. Set `NEXT_PUBLIC_API_URL` (see `frontend/.env.example`) to point it elsewhere.
+
+## Configuration
+
+Backend settings are read from environment variables or `backend/.env`:
+
+| Variable | Default | Description |
+|---|---|---|
+| `GOOGLE_API_KEY` | (required) | Gemini API key |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model used for generation |
+| `DATABASE_URL` | `sqlite:///backend/cookable.db` | SQLAlchemy database URL |
+| `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated allowed origins |
+
+> The Gemini free tier is rate-limited (a few requests per minute for `gemini-2.5-flash`). If you hit the limit, the API returns an error and you can retry after a minute.
+
+## API
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/recipes/recommend` | Generate a recipe from ingredients and filters |
+| `GET` | `/api/v1/ingredients/suggestions?query=` | Ingredient suggestions based on past usage |
+| `GET` | `/api/v1/ingredients/popular` | Most frequently used ingredients |
+| `GET` | `/health` | Health check |
+
+Example request:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/recipes/recommend \
+  -H "Content-Type: application/json" \
+  -d '{"ingredients": ["egg", "tomato", "onion"], "allow_external_ingredients": true}'
+```
+
+Full, interactive documentation is available at `/docs` while the backend is running.
+
+## Testing and CI
+
+```bash
+cd backend
+pytest
+```
+
+The tests replace Gemini with a fake model through FastAPI dependency overrides, so they run offline in well under a second and need no API key.
+
+GitHub Actions runs on every push to `dev` and `main` and on pull requests:
+
+- **Backend**: pytest
+- **Frontend**: ESLint, TypeScript type check, production build
+- **Containers**: builds both images with Docker Compose
+
+## Project Structure
 
 ```
-CapstoneProject/
-├── backend/                 # FastAPI backend
+Cookable/
+├── backend/
 │   ├── app/
-│   │   ├── api/                 # API endpoints (routers)
-│   │   ├── core/                # Core configurations (database, settings)
-│   │   ├── models/              # Pydantic and SQLAlchemy models
-│   │   └── services/            # Business logic and AI integrations
-│   ├── requirements.txt
-│   ├── main.py                  # Main FastAPI application entry
-│   └── init_db.py               # Database initialization script
-├── frontend/                # Next.js frontend
+│   │   ├── api/          # FastAPI routes
+│   │   ├── core/         # Settings and database setup
+│   │   ├── models/       # Pydantic schemas and SQLAlchemy models
+│   │   └── services/     # Recipe generation and database logic
+│   ├── tests/            # pytest suite with a fake LLM
+│   ├── main.py           # FastAPI application entry point
+│   └── Dockerfile
+├── frontend/
 │   ├── src/
-│   │   ├── app/                 # Next.js App Router routes
-│   │   ├── components/          # Reusable React components
-│   │   │   └── ui/              # Shadcn/UI (Radix UI + TailwindCSS) components
-│   │   ├── services/            # API service calls
-│   │   └── types/               # TypeScript type definitions
-│   ├── package.json
-│   └── next.config.ts
-├── ARCHITECTURE.md          # Detailed project architecture documentation
-├── TASKS.md                 # Project development tasks
-└── README.md
+│   │   ├── app/          # Next.js App Router pages
+│   │   ├── components/   # React components
+│   │   ├── services/     # API client
+│   │   └── types/        # TypeScript types
+│   └── Dockerfile
+├── compose.yaml
+└── .github/workflows/    # CI pipeline
 ```
 
-## 🛠️ Setup Instructions
+## License
 
-### Prerequisites
-
-- Python 3.12+
-- Node.js 18+
-- npm or yarn
-
-### Backend Setup
-
-1.  **Open a new terminal.**
-2.  **Navigate to the project root directory:**
-    ```bash
-    cd C:\Users\ey-lu\Desktop\computer-engineering\vscode\CapstoneProject
-    ```
-3.  **Create and activate the virtual environment (if not already done):**
-    ```bash
-    cd backend
-    python -m venv venv
-    . .\venv\Scripts\activate  # On Windows PowerShell
-    # On Git Bash/WSL: source venv/bin/activate
-    cd .. # Return to project root
-    ```
-4.  **Install backend dependencies:**
-    ```bash
-    C:\Users\ey-lu\Desktop\computer-engineering\vscode\CapstoneProject\backend\venv\Scripts\python.exe -m pip install -r backend/requirements.txt
-    ```
-5.  **Initialize the database (run once):**
-    ```bash
-    C:\Users\ey-lu\Desktop\computer-engineering\vscode\CapstoneProject\backend\venv\Scripts\python.exe backend/init_db.py
-    ```
-6.  **Start the backend server:**
-    ```bash
-    C:\Users\ey-lu\Desktop\computer-engineering\vscode\CapstoneProject\backend\venv\Scripts\python.exe -m uvicorn backend.main:app --reload
-    ```
-    The backend should now be running at `http://127.0.0.1:8000`.
-
-### Frontend Setup
-
-1.  **Open another new terminal.**
-2.  **Navigate to the frontend directory:**
-    ```bash
-    cd C:\Users\ey-lu\Desktop\computer-engineering\vscode\CapstoneProject\frontend
-    ```
-3.  **Install frontend dependencies:**
-    ```bash
-    npm install
-    ```
-4.  **Start the frontend development server:**
-    ```bash
-    npm run dev
-    ```
-    The frontend should now be running at `http://localhost:3000`.
-
-## 🎯 User Flow
-
-1.  **Ingredient Input**: User enters available ingredients into a dedicated input field.
-2.  **AI Recipe Generation**: The backend processes the ingredients using Google Gemini LLM and generates a unique recipe.
-3.  **Recipe Display**: The suggested recipe is displayed with details like title, ingredients, instructions, cooking time, and difficulty.
-4.  **Shopping List**: A generated shopping list highlights ingredients the user needs to purchase.
-5.  **Gourmet Assistant**: Users can interact with an AI agent to get:
-    *   Recipe variations
-    *   Drink pairings
-    *   Presentation tips
-6.  **Recipe Refinement**: Users can refine the current recipe based on agent suggestions.
-7.  **Explore More**: Users can start a new query or explore other options.
-
-## 🔧 Development Phases
-
--   **Phase 1: Idea and Planning (Completed)**
-    *   Problem definition and idea generation (documented in PRD.md).
-    *   User flow and technology selection (defined in PRD.md).
-
--   **Phase 2: Coding and AI Integration (Completed)**
-    *   GitHub repository setup and project structuring.
-    *   Core feature development (Ingredient Input -> AI Recipe Output).
-    *   Google Gemini LLM integration.
-
--   **Phase 3: Automation and Agent Logic (Half-Working)**
-    *   Recipe analysis and shopping list generation implemented.
-    *   Advanced "Gourmet Assistant Agent" using LangChain, including: Recipe Variation Tool, Drink Pairing Tool, and Presentation Tip Tool.
-    *   Agent API endpoint and frontend integration (buttons, modern UI for results).
-
--   **Phase 4: RAG or Fine-tuning Implementation (Broken)**
-    *   VectorDB integration (ChromaDB) to store existing recipes.
-    *   Retrieval-Augmented Generation (RAG) system to find best matching recipes based on user ingredients from VectorDB.
-
--   **Phase 5: Deployment and Demo (Pending)**
-    *   Frontend deployment to Vercel.
-    *   Backend deployment to Railway.
-    *   Project landing page creation.
-    *   Project demo video or GIF preparation.
-
-## 📝 License
-
-MIT License 
+Cookable is licensed under the [GNU Affero General Public License v3.0 or later](LICENSE).
