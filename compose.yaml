@@ -1,0 +1,26 @@
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8000:8000"
+    volumes:
+      - cookable-data:/data
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Called from the browser, so it must be reachable from the host
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "3000:8080"
+    depends_on:
+      - backend
+
+volumes:
+  cookable-data:
