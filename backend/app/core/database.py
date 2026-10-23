@@ -1,17 +1,24 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import MetaData, create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from app.core.config import settings
 
-# SQLite needs check_same_thread disabled because FastAPI may use the
-# session from a different thread than the one that created it
-connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
+# pool_pre_ping checks a pooled connection before using it, so connections
+# closed by the server (e.g. Neon scaling to zero) are replaced transparently
+engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
 
-# Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create Base class
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    # Predictable constraint names, so Alembic migrations can refer to them
+    metadata = MetaData(naming_convention={
+        "ix": "ix_%(column_0_label)s",
+        "uq": "uq_%(table_name)s_%(column_0_name)s",
+        "ck": "ck_%(table_name)s_%(constraint_name)s",
+        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+        "pk": "pk_%(table_name)s",
+    })
+
 
 # Dependency to get database session
 def get_db():

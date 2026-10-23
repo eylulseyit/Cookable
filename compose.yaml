@@ -1,15 +1,44 @@
 services:
+  db:
+    # Postgres 18 with the pgvector extension, matching the version used on Neon
+    image: docker.io/pgvector/pgvector:0.8.7-pg18
+    environment:
+      POSTGRES_USER: cookable
+      POSTGRES_PASSWORD: cookable
+      POSTGRES_DB: cookable
+    ports:
+      # Exposed so tools like DBeaver or psql on the host can connect
+      - "5432:5432"
+    volumes:
+      # Postgres 18 images keep their data under /var/lib/postgresql/18
+      - cookable-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cookable -d cookable"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   backend:
     build: ./backend
+    # Apply pending migrations before starting the API (local only; in
+    # production migrations run as a separate deploy step)
+    command: sh -c "alembic upgrade head && exec uvicorn main:app --host 0.0.0.0 --port 8000"
     env_file:
       - path: ./backend/.env
         required: false
     environment:
+      DATABASE_URL: postgresql+psycopg://cookable:cookable@db:5432/cookable
       CORS_ORIGINS: http://localhost:3000
     ports:
       - "8000:8000"
-    volumes:
-      - cookable-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+    depends_on:
+      db:
+        condition: service_healthy
 
   frontend:
     build:
@@ -23,4 +52,4 @@ services:
       - backend
 
 volumes:
-  cookable-data:
+  cookable-db:

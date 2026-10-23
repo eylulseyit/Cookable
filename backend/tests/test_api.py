@@ -99,3 +99,46 @@ def test_suggestions_fall_back_to_common_ingredients():
     service = RecipeService(llm=FakeLLM({GeneratedRecipe: SAMPLE_RECIPE}))
 
     assert asyncio.run(service.get_ingredient_suggestions("garl")) == ["garlic"]
+
+
+def test_successful_recipe_is_saved_and_logged(client):
+    client.post("/api/v1/recipes/recommend", json={"ingredients": ["pasta", "tomato"]})
+
+    from app.core.database import SessionLocal
+    from app.models.database_models import LLMRequest, Recipe
+    with SessionLocal() as db:
+        recipe = db.query(Recipe).one()
+        request = db.query(LLMRequest).one()
+
+    assert recipe.title == "Garlic Tomato Pasta"
+    assert recipe.steps == ["Boil pasta", "Make sauce", "Combine"]
+    assert request.operation == "recipe"
+    assert request.recipe_id == recipe.id
+    assert request.input["ingredients"] == ["pasta", "tomato"]
+    assert request.error is None
+
+
+def test_failed_llm_call_is_logged_with_error(client, fake_llm):
+    fake_llm.structured[GeneratedRecipe].response = RuntimeError("boom")
+
+    client.post("/api/v1/recipes/recommend", json={"ingredients": ["egg"]})
+
+    from app.core.database import SessionLocal
+    from app.models.database_models import LLMRequest
+    with SessionLocal() as db:
+        request = db.query(LLMRequest).one()
+
+    assert request.recipe_id is None
+    assert "boom" in request.error
+
+
+def test_popular_ingredients_count_successful_requests(client):
+    client.post("/api/v1/recipes/recommend", json={"ingredients": ["egg", "tomato"]})
+    client.post("/api/v1/recipes/recommend", json={"ingredients": ["egg"]})
+
+    response = client.get("/api/v1/ingredients/popular")
+
+    assert response.json()["ingredients"] == [
+        {"name": "egg", "popularity": 2},
+        {"name": "tomato", "popularity": 1},
+    ]
