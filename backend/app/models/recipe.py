@@ -1,49 +1,52 @@
-from pydantic import BaseModel, ConfigDict, Field
+from enum import Enum
 from typing import List, Optional
 
-class GeneratedRecipe(BaseModel):
-    """Recipe fields produced by the LLM."""
+from pydantic import BaseModel, Field
+
+
+class MealType(str, Enum):
+    breakfast = "breakfast"
+    lunch = "lunch"
+    dinner = "dinner"
+    snack = "snack"
+    dessert = "dessert"
+
+
+class Difficulty(str, Enum):
+    easy = "easy"
+    medium = "medium"
+    hard = "hard"
+
+
+class RecipeRequest(BaseModel):
+    """What the user asks for: their ingredients plus optional filters."""
+    ingredients: List[str] = Field(min_length=1, max_length=30)
+    count: int = Field(default=3, ge=1, le=5, description="How many recipes to suggest")
+    servings: Optional[int] = Field(default=None, ge=1, le=12)
+    meal_type: Optional[MealType] = None
+    cuisine: Optional[str] = Field(default=None, max_length=40)
+    difficulty: Optional[Difficulty] = None
+    dietary_preferences: List[str] = Field(default_factory=list, max_length=10)
+    max_cooking_time: Optional[int] = Field(default=None, gt=0, le=600)
+    allow_external_ingredients: bool = False
+
+
+class Recipe(BaseModel):
+    """One recipe as produced by the LLM and returned by the API."""
     title: str = Field(description="The name of the recipe")
+    description: str = Field(description="One short sentence that makes the dish sound appealing")
     ingredients: List[str] = Field(description="All ingredients required, including quantities")
     instructions: List[str] = Field(description="Step-by-step preparation instructions")
     cooking_time: int = Field(description="Total cooking time in minutes")
     difficulty: str = Field(description="Difficulty level: Easy, Medium or Hard")
     servings: int = Field(description="How many people the recipe serves")
     tags: List[str] = Field(description='Relevant tags, e.g. "vegetarian", "quick", "dinner"')
-
-class ShoppingList(BaseModel):
-    """Ingredients the user still needs to buy."""
-    shopping_list: List[str] = Field(description="Recipe ingredients the user does not have, without quantities")
-
-class Recipe(GeneratedRecipe):
-    shopping_list: Optional[List[str]] = None
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "title": "Pasta with Tomato Sauce",
-                "ingredients": [
-                    "200g pasta",
-                    "2 tomatoes",
-                    "1 onion",
-                    "2 cloves garlic",
-                    "2 tbsp olive oil",
-                    "Salt and pepper to taste"
-                ],
-                "instructions": [
-                    "Bring a large pot of salted water to boil",
-                    "Cook pasta according to package instructions",
-                    "Meanwhile, heat olive oil in a pan",
-                    "Sauté chopped onion and garlic until fragrant",
-                    "Add chopped tomatoes and cook until softened",
-                    "Season with salt and pepper",
-                    "Toss cooked pasta with the sauce"
-                ],
-                "cooking_time": 20,
-                "difficulty": "Easy",
-                "servings": 2,
-                "tags": ["pasta", "vegetarian", "quick"],
-                "shopping_list": []
-            }
-        }
+    shopping_list: List[str] = Field(
+        description="Ingredients of this recipe the user does not have, without quantities. "
+        "Empty if the user has everything."
     )
+
+
+class RecipeSuggestions(BaseModel):
+    """Several distinct recipes for one request, generated in a single LLM call."""
+    recipes: List[Recipe] = Field(description="Distinct recipes, each a different dish")

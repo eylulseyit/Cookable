@@ -8,20 +8,28 @@ from app.models.database_models import LLMRequest, Recipe, RecipeIngredient, Tag
 from app.models.recipe import Recipe as RecipeSchema
 
 
+# llm_requests.operation of a recipe suggestion call
+RECIPE_SUGGESTIONS = "recipe_suggestions"
+
+
 class DatabaseService:
     def __init__(self, db: Session):
         self.db = db
 
     # Recipe operations
-    def create_recipe(self, recipe_data: RecipeSchema, source: str = "generated") -> Recipe:
+    def create_recipe(
+        self, recipe_data: RecipeSchema, source: str = "generated", llm_request_id: Optional[int] = None
+    ) -> Recipe:
         """Save a recipe with its ingredient lines and tags"""
         db_recipe = Recipe(
             title=recipe_data.title,
+            description=recipe_data.description,
             servings=recipe_data.servings,
             cooking_time_minutes=recipe_data.cooking_time,
             difficulty=recipe_data.difficulty,
             steps=recipe_data.instructions,
             source=source,
+            llm_request_id=llm_request_id,
             ingredients=[
                 RecipeIngredient(position=i, raw_text=line)
                 for i, line in enumerate(recipe_data.ingredients, 1)
@@ -51,7 +59,6 @@ class DatabaseService:
         input: dict[str, Any],
         latency_ms: int,
         error: Optional[str] = None,
-        recipe_id: Optional[int] = None,
         user_id: Optional[uuid.UUID] = None,
     ) -> LLMRequest:
         """Record one LLM call"""
@@ -61,7 +68,6 @@ class DatabaseService:
             input=input,
             latency_ms=latency_ms,
             error=error,
-            recipe_id=recipe_id,
             user_id=user_id,
         )
         self.db.add(request)
@@ -76,7 +82,7 @@ class DatabaseService:
             select(ingredient.c.value, count)
             .select_from(LLMRequest)
             .join(ingredient, true())
-            .where(LLMRequest.operation == "recipe", LLMRequest.error.is_(None))
+            .where(LLMRequest.operation == RECIPE_SUGGESTIONS, LLMRequest.error.is_(None))
             .group_by(ingredient.c.value)
             .order_by(count.desc(), ingredient.c.value)
             .limit(limit)

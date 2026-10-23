@@ -1,42 +1,46 @@
 import { useState } from 'react';
-import FilterOptions from '@/components/FilterOptions';
-import IngredientInput from '@/components/IngredientInput';
-import RecipeDisplay from '@/components/RecipeDisplay';
-import ThemeToggle from '@/components/ThemeToggle';
-import { Button } from '@/components/ui/Button';
+import Header from '@/components/Header';
+import FormScreen from '@/screens/FormScreen';
+import RecipeScreen from '@/screens/RecipeScreen';
+import ResultsScreen from '@/screens/ResultsScreen';
 import { ApiService } from '@/services/api';
-import type { FilterOptions as Filters, Recipe } from '@/types/recipe';
+import type { Recipe, RecipeFilters } from '@/types/recipe';
 
-const DEFAULT_FILTERS: Filters = {
-  dietary_preferences: [],
+const DEFAULT_FILTERS: RecipeFilters = {
+  count: 3,
+  meal_type: null,
+  cuisine: null,
+  difficulty: null,
   max_cooking_time: null,
+  servings: null,
+  dietary_preferences: [],
   allow_external_ingredients: false,
 };
 
+// Which screen is shown; the recipe screen also knows which recipe
+type View = { name: 'form' } | { name: 'results' } | { name: 'recipe'; index: number };
+
 export default function App() {
   const [ingredients, setIngredients] = useState<string[]>([]);
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [filters, setFilters] = useState<RecipeFilters>(DEFAULT_FILTERS);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [view, setView] = useState<View>({ name: 'form' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGetRecipe = async () => {
-    if (ingredients.length === 0) {
-      setError('Please enter at least one ingredient');
-      return;
-    }
+  const show = (next: View) => {
+    setView(next);
+    window.scrollTo({ top: 0 });
+  };
 
+  const handleSubmit = async () => {
     setLoading(true);
     setError(null);
-
     try {
-      const recipeData = await ApiService.getRecipeRecommendation({
-        ingredients,
-        dietary_preferences: filters.dietary_preferences.length > 0 ? filters.dietary_preferences : undefined,
-        max_cooking_time: filters.max_cooking_time ?? undefined,
-        allow_external_ingredients: filters.allow_external_ingredients,
-      });
-      setRecipe(recipeData);
+      const result = await ApiService.getRecipeSuggestions({ ingredients, ...filters });
+      setRecipes(result);
+      // A single recipe skips the results list
+      show(result.length === 1 ? { name: 'recipe', index: 0 } : { name: 'results' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -44,51 +48,37 @@ export default function App() {
     }
   };
 
-  const handleReset = () => {
-    setIngredients([]);
-    setFilters(DEFAULT_FILTERS);
-    setRecipe(null);
-    setError(null);
-  };
-
   return (
-    <div className="min-h-screen px-4 pt-14 pb-20 sm:px-6">
-      <main className="mx-auto flex max-w-3xl flex-col gap-6">
-        <header className="flex items-start justify-between gap-4 pb-5">
-          <div className="flex flex-col gap-3.5">
-            <h1 className="text-6xl leading-none font-extrabold tracking-tighter sm:text-7xl">
-              Cook<span className="text-accent">able</span>
-            </h1>
-            <p className="text-lg text-muted">Your ingredients in. A recipe out.</p>
-          </div>
-          <ThemeToggle />
-        </header>
-
-        <IngredientInput ingredients={ingredients} onIngredientsChange={setIngredients} />
-        <FilterOptions filters={filters} onFiltersChange={setFilters} />
-
-        <Button
-          variant="primary"
-          onClick={handleGetRecipe}
-          disabled={loading || ingredients.length === 0}
-          className="h-16 text-xl tracking-tight"
-        >
-          {loading ? 'Cooking up a recipe...' : 'Get my recipe →'}
-        </Button>
-
-        {error && (
-          <div role="alert" className="rounded-xl border-2 border-danger bg-surface px-4 py-3 font-medium text-danger">
-            {error}
-          </div>
+    <div className="min-h-screen">
+      <Header />
+      <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-8 pb-20 sm:px-6">
+        {view.name === 'form' && (
+          <FormScreen
+            ingredients={ingredients}
+            filters={filters}
+            loading={loading}
+            error={error}
+            onIngredientsChange={setIngredients}
+            onFiltersChange={setFilters}
+            onSubmit={handleSubmit}
+          />
         )}
-
-        {recipe && (
-          <>
-            <RecipeDisplay recipe={recipe} />
-            <Button variant="outline" onClick={handleReset} className="h-12 self-center px-6">
-              Start over
-            </Button>
-          </>
+        {view.name === 'results' && (
+          <ResultsScreen
+            recipes={recipes}
+            ingredients={ingredients}
+            filters={filters}
+            onSelect={(index) => show({ name: 'recipe', index })}
+            onBack={() => show({ name: 'form' })}
+          />
+        )}
+        {view.name === 'recipe' && (
+          <RecipeScreen
+            recipes={recipes}
+            index={view.index}
+            onSelect={(index) => show({ name: 'recipe', index })}
+            onBack={() => show(recipes.length > 1 ? { name: 'results' } : { name: 'form' })}
+          />
         )}
       </main>
     </div>
