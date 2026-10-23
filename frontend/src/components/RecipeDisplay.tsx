@@ -7,12 +7,13 @@ interface RecipeDisplayProps {
 }
 
 export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
-  const shoppingList = recipe.shopping_list ?? [];
+  const shoppingList = recipe.shopping_list;
 
   return (
     <Card highlight className="gap-6 sm:p-8">
       <div className="flex flex-col gap-3">
-        <h2 className="text-4xl leading-tight font-extrabold tracking-tight">{recipe.title}</h2>
+        <h1 className="text-4xl leading-tight font-extrabold tracking-tight">{recipe.title}</h1>
+        <p className="leading-relaxed text-muted">{recipe.description}</p>
         <div className="flex flex-wrap gap-2">
           <Tag>{recipe.cooking_time} min</Tag>
           <Tag>{recipe.difficulty}</Tag>

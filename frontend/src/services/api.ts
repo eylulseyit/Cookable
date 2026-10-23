@@ -1,4 +1,4 @@
-import { Recipe, IngredientRequest } from '@/types/recipe';
+import type { Recipe, RecipeRequest, RecipeSuggestions } from '@/types/recipe';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -14,7 +14,7 @@ async function errorMessage(response: Response): Promise<string> {
 }
 
 export class ApiService {
-  static async getRecipeRecommendation(request: IngredientRequest): Promise<Recipe> {
+  static async getRecipeSuggestions(request: RecipeRequest): Promise<Recipe[]> {
     let response: Response;
     try {
       response = await fetch(`${API_BASE_URL}/recipes/recommend`, {
@@ -32,7 +32,8 @@ export class ApiService {
       throw new Error(await errorMessage(response));
     }
 
-    return response.json();
+    const data: RecipeSuggestions = await response.json();
+    return data.recipes;
   }
 
   static async getIngredientSuggestions(query: string): Promise<string[]> {
