@@ -9,6 +9,14 @@
       name="description"
       content="Turn the ingredients you already have into a recipe, powered by Google Gemini."
     />
+    <!-- Apply the saved or system theme before first paint, so the page never flashes the wrong theme -->
+    <script>
+      try {
+        const saved = localStorage.getItem("theme");
+        const dark = saved ? saved === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.toggle("dark", dark);
+      } catch {}
+    </script>
   </head>
   <body class="antialiased">
     <div id="root"></div>
