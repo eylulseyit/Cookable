@@ -1,10 +1,7 @@
-fastapi
-uvicorn
-pydantic
-python-dotenv
-sqlalchemy
-psycopg2-binary
-langgraph
-langchain-google-genai
-google-generativeai
-langchain 
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+python-dotenv>=1.0
+sqlalchemy>=2.0
+langchain-core>=0.3
+langchain-google-genai>=2.1

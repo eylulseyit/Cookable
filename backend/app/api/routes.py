@@ -1,64 +1,58 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from app.services.recipe_service import RecipeService
+from app.models.recipe import Recipe
+from app.services.recipe_service import RecipeService, LLMConfigurationError, RecipeGenerationError
 from app.core.database import get_db
 from app.services.database_service import DatabaseService
 
 router = APIRouter()
 
 class IngredientRequest(BaseModel):
-    ingredients: List[str]
+    ingredients: List[str] = Field(min_length=1, max_length=30)
     dietary_preferences: Optional[List[str]] = None
-    max_cooking_time: Optional[int] = None
+    max_cooking_time: Optional[int] = Field(default=None, gt=0, le=600)
     allow_external_ingredients: bool = False
-
-class RecipeResponse(BaseModel):
-    title: str
-    ingredients: List[str]
-    instructions: List[str]
-    cooking_time: int
-    difficulty: str
-    servings: int
-    tags: List[str]
-    shopping_list: Optional[List[str]] = None
 
 class UserCreateResponse(BaseModel):
     user_id: int
     message: str
 
-@router.post("/recipes/recommend", response_model=RecipeResponse)
+def get_recipe_service(db: Session = Depends(get_db)) -> RecipeService:
+    return RecipeService(db)
+
+@router.post("/recipes/recommend", response_model=Recipe)
 async def recommend_recipe(
     request: IngredientRequest,
-    db: Session = Depends(get_db)
+    recipe_service: RecipeService = Depends(get_recipe_service)
 ):
     """
     Get recipe recommendations based on available ingredients
     """
+    ingredients = [i.strip().lower() for i in request.ingredients if i.strip()]
+    if not ingredients:
+        raise HTTPException(status_code=422, detail="Please provide at least one ingredient.")
+
     try:
-        recipe_service = RecipeService(db)
-        recipe = await recipe_service.get_recipe_recommendation(
-            ingredients=request.ingredients,
+        return await recipe_service.get_recipe_recommendation(
+            ingredients=ingredients,
             dietary_preferences=request.dietary_preferences,
             max_cooking_time=request.max_cooking_time,
             allow_external_ingredients=request.allow_external_ingredients
         )
-        return recipe
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating recipe: {str(e)}")
+    except LLMConfigurationError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except RecipeGenerationError as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 @router.post("/users/create", response_model=UserCreateResponse)
 async def create_user(db: Session = Depends(get_db)):
     """
     Create a new user for tracking queries
     """
-    try:
-        db_service = DatabaseService(db)
-        user = db_service.create_user()
-        return UserCreateResponse(user_id=user.id, message="User created successfully")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error creating user: {str(e)}")
+    user = DatabaseService(db).create_user()
+    return UserCreateResponse(user_id=user.id, message="User created successfully")
 
 @router.get("/recipes/health")
 async def recipe_service_health():
@@ -69,35 +63,27 @@ async def recipe_service_health():
 
 @router.get("/ingredients/suggestions")
 async def get_ingredient_suggestions(
-    query: str,
-    db: Session = Depends(get_db)
+    query: str = Query(min_length=1),
+    recipe_service: RecipeService = Depends(get_recipe_service)
 ):
     """
     Get ingredient suggestions based on partial input
     """
-    try:
-        recipe_service = RecipeService(db)
-        suggestions = await recipe_service.get_ingredient_suggestions(query)
-        return {"suggestions": suggestions}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting suggestions: {str(e)}")
+    suggestions = await recipe_service.get_ingredient_suggestions(query)
+    return {"suggestions": suggestions}
 
 @router.get("/ingredients/popular")
 async def get_popular_ingredients(
-    limit: int = 10,
+    limit: int = Query(default=10, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
     """
     Get most popular ingredients
     """
-    try:
-        db_service = DatabaseService(db)
-        popular_ingredients = db_service.get_popular_ingredients(limit)
-        return {
-            "ingredients": [
-                {"name": ingredient.name, "popularity": ingredient.popularity_count}
-                for ingredient in popular_ingredients
-            ]
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting popular ingredients: {str(e)}") 
+    popular_ingredients = DatabaseService(db).get_popular_ingredients(limit)
+    return {
+        "ingredients": [
+            {"name": ingredient.name, "popularity": ingredient.popularity_count}
+            for ingredient in popular_ingredients
+        ]
+    }
