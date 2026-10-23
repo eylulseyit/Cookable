@@ -1,5 +1,3 @@
-'use client';
-
 import { Recipe } from '@/types/recipe';
 
 interface RecipeDisplayProps {

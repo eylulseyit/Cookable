@@ -1,5 +1,3 @@
-'use client';
-
 import { FilterOptions as FilterOptionsType } from '@/types/recipe';
 
 interface FilterOptionsProps {
