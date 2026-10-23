@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import IngredientInput from '@/components/IngredientInput';
 import RecipeDisplay from '@/components/RecipeDisplay';
@@ -7,7 +5,7 @@ import FilterOptions from '@/components/FilterOptions';
 import { Recipe } from '@/types/recipe';
 import { ApiService } from '@/services/api';
 
-export default function Home() {
+export default function App() {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     dietary_preferences: [] as string[],

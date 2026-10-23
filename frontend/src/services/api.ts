@@ -1,6 +1,6 @@
 import { Recipe, IngredientRequest } from '@/types/recipe';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 async function errorMessage(response: Response): Promise<string> {
   try {
