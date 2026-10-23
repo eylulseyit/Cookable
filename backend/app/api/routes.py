@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -16,7 +17,7 @@ class IngredientRequest(BaseModel):
     allow_external_ingredients: bool = False
 
 class UserCreateResponse(BaseModel):
-    user_id: int
+    user_id: uuid.UUID
     message: str
 
 def get_recipe_service(db: Session = Depends(get_db)) -> RecipeService:
@@ -83,7 +84,7 @@ async def get_popular_ingredients(
     popular_ingredients = DatabaseService(db).get_popular_ingredients(limit)
     return {
         "ingredients": [
-            {"name": ingredient.name, "popularity": ingredient.popularity_count}
-            for ingredient in popular_ingredients
+            {"name": name, "popularity": count}
+            for name, count in popular_ingredients
         ]
     }

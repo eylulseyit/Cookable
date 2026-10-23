@@ -1,6 +1,8 @@
 import logging
+import time
+import uuid
 from functools import lru_cache
-from typing import List, Optional
+from typing import Any, List, Optional
 from sqlalchemy.orm import Session
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -15,6 +17,9 @@ class LLMConfigurationError(RuntimeError):
 
 class RecipeGenerationError(RuntimeError):
     """Raised when the LLM fails to produce a usable recipe."""
+
+def _elapsed_ms(started: float) -> int:
+    return round((time.perf_counter() - started) * 1000)
 
 @lru_cache
 def get_llm() -> BaseChatModel:
@@ -100,6 +105,12 @@ class RecipeService:
             "- If the user has all the ingredients, return an empty list.",
         ])
 
+    def _log_llm_request(self, operation: str, input: dict[str, Any], latency_ms: int, **fields) -> None:
+        if self.db_service:
+            self.db_service.log_llm_request(
+                operation=operation, model=settings.GEMINI_MODEL, input=input, latency_ms=latency_ms, **fields
+            )
+
     async def _generate_shopping_list(
         self,
         user_ingredients: List[str],
@@ -110,13 +121,17 @@ class RecipeService:
             return []
 
         prompt = self._build_shopping_list_prompt(user_ingredients, recipe_ingredients)
+        log_input = {"user_ingredients": user_ingredients, "recipe_ingredients": recipe_ingredients}
+        started = time.perf_counter()
         try:
             result = await self.llm.with_structured_output(ShoppingList).ainvoke(prompt)
-            return result.shopping_list
-        except Exception:
+        except Exception as e:
             # The recipe is still useful without a shopping list, so don't fail the request
             logger.exception("Failed to generate shopping list")
+            self._log_llm_request("shopping_list", log_input, _elapsed_ms(started), error=repr(e))
             return []
+        self._log_llm_request("shopping_list", log_input, _elapsed_ms(started))
+        return result.shopping_list
 
     async def get_recipe_recommendation(
         self,
@@ -124,7 +139,7 @@ class RecipeService:
         dietary_preferences: Optional[List[str]] = None,
         max_cooking_time: Optional[int] = None,
         allow_external_ingredients: bool = False,
-        user_id: Optional[int] = None
+        user_id: Optional[uuid.UUID] = None
     ) -> Recipe:
         """
         Generate a recipe recommendation based on available ingredients using Google Gemini.
@@ -132,16 +147,25 @@ class RecipeService:
         prompt =self._build_recipe_prompt(ingredients, dietary_preferences, max_cooking_time, allow_external_ingredients)
         logger.debug("Recipe prompt:\n%s", prompt)
 
+        log_input = {
+            "ingredients": ingredients,
+            "dietary_preferences": dietary_preferences or [],
+            "max_cooking_time": max_cooking_time,
+            "allow_external_ingredients": allow_external_ingredients,
+        }
+        llm = self.llm  # Raises LLMConfigurationError before anything is timed or logged
+        started = time.perf_counter()
         try:
-            generated = await self.llm.with_structured_output(GeneratedRecipe).ainvoke(prompt)
-        except LLMConfigurationError:
-            raise
+            generated = await llm.with_structured_output(GeneratedRecipe).ainvoke(prompt)
+            if generated is None:
+                raise RecipeGenerationError("The AI model returned an empty response.")
         except Exception as e:
             logger.exception("LLM recipe generation failed")
+            self._log_llm_request("recipe", log_input, _elapsed_ms(started), error=repr(e), user_id=user_id)
+            if isinstance(e, RecipeGenerationError):
+                raise
             raise RecipeGenerationError("Failed to generate a valid recipe from the AI model.") from e
-
-        if generated is None:
-            raise RecipeGenerationError("The AI model returned an empty response.")
+        latency_ms = _elapsed_ms(started)
 
         recipe = Recipe(**generated.model_dump())
 
@@ -154,20 +178,11 @@ class RecipeService:
         else:
             recipe.shopping_list = []
 
-        # Only record usage once a recipe was actually generated
         if self.db_service:
-            for ingredient in ingredients:
-                self.db_service.increment_ingredient_popularity(ingredient)
-
-            if user_id:
-                self.db_service.save_user_query(
-                    user_id=user_id,
-                    ingredients=ingredients,
-                    dietary_preferences=dietary_preferences,
-                    max_cooking_time=max_cooking_time
-                )
-
-            self.db_service.create_recipe(recipe)
+            db_recipe = self.db_service.create_recipe(recipe)
+            self._log_llm_request(
+                "recipe", log_input, latency_ms, recipe_id=db_recipe.id, user_id=user_id
+            )
 
         return recipe
 
@@ -179,8 +194,7 @@ class RecipeService:
 
         # If database is available, get popular ingredients
         if self.db_service:
-            popular_ingredients = self.db_service.get_popular_ingredients(50)
-            suggestions = [ingredient.name for ingredient in popular_ingredients]
+            suggestions = [name for name, _ in self.db_service.get_popular_ingredients(50)]
         else:
             suggestions = self.common_ingredients
 

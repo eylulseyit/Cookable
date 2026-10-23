@@ -17,7 +17,10 @@ class Settings:
     API_V1_STR: str = "/api/v1"
 
     # Database settings
-    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{BACKEND_DIR / 'cookable.db'}")
+    # Defaults to the Postgres container from compose.yaml
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL", "postgresql+psycopg://cookable:cookable@localhost:5432/cookable"
+    )
 
     # Google Gemini settings
     GOOGLE_API_KEY: str | None = os.getenv("GOOGLE_API_KEY")
