@@ -61,7 +61,7 @@ export default function FilterOptions({ filters, onFiltersChange }: FilterOption
           </div>
         </label>
         <p className="text-sm text-gray-500 mt-1">
-          If enabled, we'll suggest recipes that might require a few extra items, and we'll provide a shopping list for them.
+          If enabled, we&apos;ll suggest recipes that might require a few extra items, and we&apos;ll provide a shopping list for them.
         </p>
       </div>
 
@@ -91,6 +91,7 @@ export default function FilterOptions({ filters, onFiltersChange }: FilterOption
         <h3 className="text-lg font-semibold text-gray-700 mb-3">Maximum Cooking Time:</h3>
         <div className="flex flex-wrap gap-2">
           <button
+            type="button"
             onClick={() => handleCookingTimeChange(null)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
               filters.max_cooking_time === null
@@ -102,6 +103,7 @@ export default function FilterOptions({ filters, onFiltersChange }: FilterOption
           </button>
           {cookingTimeOptions.map((option) => (
             <button
+              type="button"
               key={option.value}
               onClick={() => handleCookingTimeChange(option.value)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
@@ -129,7 +131,7 @@ export default function FilterOptions({ filters, onFiltersChange }: FilterOption
                 {dietaryOptions.find(opt => opt.value === preference)?.label || preference}
               </span>
             ))}
-            {filters.max_cooking_time && (
+            {filters.max_cooking_time !== null && (
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                 ⏱️ Max {filters.max_cooking_time} min
               </span>

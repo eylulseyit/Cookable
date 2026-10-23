@@ -5,6 +5,7 @@ import IngredientInput from '@/components/IngredientInput';
 import RecipeDisplay from '@/components/RecipeDisplay';
 import FilterOptions from '@/components/FilterOptions';
 import { Recipe } from '@/types/recipe';
+import { ApiService } from '@/services/api';
 
 export default function Home() {
   const [ingredients, setIngredients] = useState<string[]>([]);
@@ -27,24 +28,12 @@ export default function Home() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/recipes/recommend', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ingredients,
-          dietary_preferences: filters.dietary_preferences.length > 0 ? filters.dietary_preferences : undefined,
-          max_cooking_time: filters.max_cooking_time || undefined,
-          allow_external_ingredients: filters.allow_external_ingredients,
-        }),
+      const recipeData = await ApiService.getRecipeRecommendation({
+        ingredients,
+        dietary_preferences: filters.dietary_preferences.length > 0 ? filters.dietary_preferences : undefined,
+        max_cooking_time: filters.max_cooking_time ?? undefined,
+        allow_external_ingredients: filters.allow_external_ingredients,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to get recipe recommendation');
-      }
-
-      const recipeData = await response.json();
       setRecipe(recipeData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -70,7 +59,7 @@ export default function Home() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            🍳 Recipe Recommender
+            🍳 Cookable
           </h1>
           <p className="text-gray-600 text-lg">
             Enter your available ingredients and get AI-powered recipe suggestions
@@ -104,6 +93,7 @@ export default function Home() {
           {/* Step 3: Get Recipe Button */}
           <div className="text-center mb-6">
             <button
+              type="button"
               onClick={handleGetRecipe}
               disabled={loading || ingredients.length === 0}
               className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors duration-200"
@@ -114,7 +104,7 @@ export default function Home() {
 
           {/* Error Display */}
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            <div role="alert" className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
               {error}
             </div>
           )}
@@ -133,6 +123,7 @@ export default function Home() {
           {recipe && (
             <div className="text-center">
               <button
+                type="button"
                 onClick={handleReset}
                 className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors duration-200"
               >

@@ -18,12 +18,12 @@ export default function IngredientInput({ ingredients, onIngredientsChange }: In
     }
   };
 
-  const handleRemoveIngredient = (index: number) => {
-    const newIngredients = ingredients.filter((_, i) => i !== index);
+  const handleRemoveIngredient = (ingredient: string) => {
+    const newIngredients = ingredients.filter((i) => i !== ingredient);
     onIngredientsChange(newIngredients);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleAddIngredient();
     }
@@ -37,11 +37,13 @@ export default function IngredientInput({ ingredients, onIngredientsChange }: In
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyDown}
+          aria-label="Ingredient"
           placeholder="Enter an ingredient (e.g., chicken, tomato, rice)"
           className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
         />
         <button
+          type="button"
           onClick={handleAddIngredient}
           disabled={!inputValue.trim()}
           className="px-6 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors duration-200"
@@ -55,14 +57,16 @@ export default function IngredientInput({ ingredients, onIngredientsChange }: In
         <div>
           <h3 className="text-lg font-semibold text-gray-700 mb-3">Your Ingredients:</h3>
           <div className="flex flex-wrap gap-2">
-            {ingredients.map((ingredient, index) => (
+            {ingredients.map((ingredient) => (
               <div
-                key={index}
+                key={ingredient}
                 className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 py-1 rounded-full"
               >
                 <span className="text-sm font-medium">{ingredient}</span>
                 <button
-                  onClick={() => handleRemoveIngredient(index)}
+                  type="button"
+                  onClick={() => handleRemoveIngredient(ingredient)}
+                  aria-label={`Remove ${ingredient}`}
                   className="text-orange-600 hover:text-orange-800 text-lg font-bold"
                 >
                   ×
@@ -79,6 +83,7 @@ export default function IngredientInput({ ingredients, onIngredientsChange }: In
         <div className="flex flex-wrap gap-2">
           {['onion', 'garlic', 'tomato', 'chicken', 'rice', 'pasta', 'egg', 'cheese'].map((suggestion) => (
             <button
+              type="button"
               key={suggestion}
               onClick={() => {
                 if (!ingredients.includes(suggestion)) {
